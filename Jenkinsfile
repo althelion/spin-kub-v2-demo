@@ -37,34 +37,6 @@ node {
             checkout([$class: 'GitSCM', branches: [[name: env.BRANCH_NAME]], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: scm.userRemoteConfigs])
             sh 'ls -la'
         }
-        stage('SonarQube') {
-            def scannerHome = tool 'MySonarQubeScanner'
-            withSonarQubeEnv('MySonarQube') {
-                sh "${scannerHome}/bin/sonar-scanner"
-            }
-
-            script {
-                Integer waitSeconds = 10
-                Integer timeOutMinutes = 1
-                Integer maxRetry = (timeOutMinutes * 60) / waitSeconds as Integer
-                for (Integer i = 0; i < maxRetry; i++) {
-                    try {
-                    timeout(time: waitSeconds, unit: 'SECONDS') {
-                        def qg = waitForQualityGate()
-                        if (qg.status != 'OK') {
-                            error "Pipeline aborted due to quality gate failure: ${qg.status}"
-                        } else {
-                            i = maxRetry
-                        }
-                    }
-                    } catch (Throwable e) {
-                    if (i == maxRetry - 1) {
-                        throw e
-                        }
-                    }
-                }
-            }
-        }
         (imageName, imageId) = tools.getImageInfo("go")
         stage('Docker: Build & Push') {
             sh """
